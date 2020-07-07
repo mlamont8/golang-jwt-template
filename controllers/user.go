@@ -20,6 +20,13 @@ func NewUserController() *UserController {
 	return &UserController{}
 }
 
+// First sample user from storage
+var user = models.User{
+	ID:       1,
+	Username: "username",
+	Password: "password",
+}
+
 // set env variables
 func envVariables(key string) string {
 	viper.SetConfigFile(".env")
@@ -53,12 +60,12 @@ func (uc UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 	}
 
 	//compare the user from the request, with the one we defined:
-	if models.user.Username != u.Username || models.user.Password != u.Password {
+	if user.Username != u.Username || user.Password != u.Password {
 		http.Error(w, "Username and/or password do not match", http.StatusForbidden)
 		return
 	}
 
-	ts, err := CreateToken(models.user.ID)
+	ts, err := CreateToken(user.ID)
 	if err != nil {
 		http.Error(w, "Error creating tokens", http.StatusBadRequest)
 		return
