@@ -1,3 +1,5 @@
+package models
+
 type TokenDetails struct {
 	AccessToken  string
 	RefreshToken string
