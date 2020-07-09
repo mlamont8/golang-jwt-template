@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -24,7 +23,7 @@ var user = models.User{
 
 func (uc UserController) Login(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	var u models.User
-
+	// Decode body
 	err := json.NewDecoder(r.Body).Decode(&u)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -42,9 +41,18 @@ func (uc UserController) Login(w http.ResponseWriter, r *http.Request, _ httprou
 		http.Error(w, "Error creating tokens", http.StatusBadRequest)
 		return
 	}
+	// Save to redis
+	saveErr := CreateAuth(user.ID, ts)
+	if saveErr != nil {
+		http.Error(w, "Redis save error", http.StatusBadRequest)
+	}
+
 	tokens := map[string]string{
 		"access_token":  ts.AccessToken,
 		"refresh_token": ts.RefreshToken,
 	}
-	fmt.Println(tokens, err)
+
+	// Return Tokens
+	json.NewEncoder(w).Encode(tokens)
+
 }
