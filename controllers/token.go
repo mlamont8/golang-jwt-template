@@ -1,10 +1,10 @@
 package controllers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -92,7 +92,7 @@ func verifyToken(r *http.Request) (*jwt.Token, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(os.Getenv("ACCESS_SECRET")), nil
+		return []byte(envVariables("ACCESS_SECRET")), nil
 	})
 	if err != nil {
 		return nil, err
@@ -164,4 +164,73 @@ func TokenAuthMiddleware(h httprouter.Handle) httprouter.Handle {
 		}
 		h(w, r, ps)
 	}
+}
+
+func Refresh(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	mapToken := map[string]string{}
+	// Retrieve tokens from request body
+	err := json.NewDecoder(r.Body).Decode(&mapToken)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	refreshToken := mapToken["refresh_token"]
+
+	//verify the token
+	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+		//Make sure that the token method conform to "SigningMethodHMAC"
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(envVariables("REFRESH_SECRET")), nil
+	})
+	//if there is an error, the token must have expired
+	if err != nil {
+		http.Error(w, "Refresh token expired", http.StatusUnauthorized)
+		return
+	}
+	//is token valid?
+	if _, ok := token.Claims.(jwt.Claims); !ok && !token.Valid {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	//Since token is valid, get the uuid:
+	claims, ok := token.Claims.(jwt.MapClaims) //the token claims should conform to MapClaims
+	if ok && token.Valid {
+		refreshUuid, ok := claims["refresh_uuid"].(string) //convert the interface to string
+		if !ok {
+			http.Error(w, "Unauthorized", http.StatusUnprocessableEntity)
+			return
+		}
+		userId, err := strconv.ParseUint(fmt.Sprintf("%.f", claims["user_id"]), 10, 64)
+		if err != nil {
+			http.Error(w, "Error occurred", http.StatusUnauthorized)
+			return
+		}
+		//Delete the previous Refresh Token
+		deleted, delErr := DeleteAuth(refreshUuid)
+		if delErr != nil || deleted == 0 { //if any goes wrong
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		//Create new pairs of refresh and access tokens
+		ts, createErr := CreateToken(userId)
+		if createErr != nil {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		//save the tokens metadata to redis
+		saveErr := CreateAuth(userId, ts)
+		if saveErr != nil {
+			http.Error(w, "Forbidden", http.StatusForbidden)
+			return
+		}
+		tokens := map[string]string{
+			"access_token":  ts.AccessToken,
+			"refresh_token": ts.RefreshToken,
+		}
+		// Return Tokens
+		json.NewEncoder(w).Encode(tokens)
+	}
+
 }

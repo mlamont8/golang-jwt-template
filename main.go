@@ -40,6 +40,7 @@ func main() {
 	uc := controllers.NewUserController()
 	tc := controllers.NewTodoController()
 	router.POST("/login", uc.Login)
+	router.POST("/token/refresh", controllers.Refresh)
 	router.POST("/logout", controllers.TokenAuthMiddleware(uc.Logout))
 	router.POST("/todo", controllers.TokenAuthMiddleware(tc.CreateTodo))
 
