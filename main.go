@@ -40,6 +40,8 @@ func main() {
 	uc := controllers.NewUserController()
 	tc := controllers.NewTodoController()
 	router.POST("/login", uc.Login)
+	router.POST("/logout", uc.Logout)
 	router.POST("/todo", tc.CreateTodo)
+
 	http.ListenAndServe("localhost:8080", router)
 }

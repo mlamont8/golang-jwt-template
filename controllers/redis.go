@@ -34,3 +34,17 @@ func CreateAuth(userid uint64, td *models.TokenDetails) error {
 	}
 	return nil
 }
+
+// DeleteAuth deletes metadata from Redis
+func DeleteAuth(givenUuid string) (int64, error) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	deleted, err := rdb.Del(ctx, givenUuid).Result()
+	if err != nil {
+		return 0, err
+	}
+	return deleted, nil
+}
