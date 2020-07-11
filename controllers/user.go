@@ -66,7 +66,7 @@ func (uc UserController) Logout(w http.ResponseWriter, r *http.Request, _ httpro
 	}
 	deleted, delErr := DeleteAuth(au.AccessUuid)
 	if delErr != nil || deleted == 0 { //if anything goes wrong
-		http.Error(w, "Unauthorized Delete Auth", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	fmt.Println("User Logged Out")

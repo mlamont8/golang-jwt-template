@@ -11,6 +11,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/go-redis/redis/v8"
+	"github.com/julienschmidt/httprouter"
 	"github.com/mlamont8/golang-jwt-template/models"
 	"github.com/spf13/viper"
 	"github.com/twinj/uuid"
@@ -148,4 +149,19 @@ func FetchAuth(authD *models.AccessDetails) (uint64, error) {
 	}
 	userID, _ := strconv.ParseUint(userid, 10, 64)
 	return userID, nil
+}
+
+// Check if Token is valid before going to specific routes
+func TokenAuthMiddleware(h httprouter.Handle) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+		err := tokenValid(r)
+		if err != nil {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
+			return
+
+		}
+		h(w, r, ps)
+	}
 }
