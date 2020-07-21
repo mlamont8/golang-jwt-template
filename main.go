@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/julienschmidt/httprouter"
@@ -16,12 +15,8 @@ var ctx = context.Background()
 
 func init() {
 	//Initializing redis
-	dsn := os.Getenv("REDIS_DSN")
-	if len(dsn) == 0 {
-		dsn = "localhost:6379"
-	}
 	client = redis.NewClient(&redis.Options{
-		Addr:     dsn, //redis port
+		Addr:     "localhost:6379", //redis port
 		Password: "",
 		DB:       0,
 	})
